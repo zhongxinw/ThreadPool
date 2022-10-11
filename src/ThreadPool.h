@@ -17,23 +17,23 @@ class SafeQueue
 public:
 	// 推入队列
 	void enqueue(T &t) {
-		std::unique_lock lock(m_mutex);
+		std::unique_lock<std::mutex> lock(m_mutex);
 		m_queue.emplace(t);
 	}
 	bool empty()
 	{
-		std::unique_lock lock(m_mutex);
+		std::unique_lock<std::mutex> lock(m_mutex);
 		return m_queue.empty();
 	}
 	int32_t size() 
 	{
-		std::unique_lock lock(m_mutex);
+		std::unique_lock<std::mutex> lock(m_mutex);
 		return m_queue.size();
 	}
 	// 出队列
 	bool dequeue(T &t) 
 	{
-		std::unique_lock lock(m_mutex);
+		std::unique_lock<std::mutex> lock(m_mutex);
 		if (m_queue.empty())
 		{
 			return false;
@@ -57,7 +57,7 @@ class ThreadPool
 	public:
 		ThreadWorker(ThreadPool* pool, int32_t id) :m_pool(pool), m_id(id)
 		{
-			assert(m_pool == nullptr);
+			assert(m_pool != nullptr);
 		}
 
 		// 重载()符号，使其作为仿函数使用
@@ -74,7 +74,7 @@ class ThreadPool
 					// 线程池任务队列空时，阻塞等待唤醒
 					if (m_pool->IsEmpty())
 					{
-						std::unique_lock lock(m_pool->GetMutex());
+						std::unique_lock<std::mutex> lock(m_pool->GetMutex());
 						m_pool->GetCondition().wait(lock);
 					}
 
@@ -102,10 +102,10 @@ public:
 	auto submit(F && f,Args && ...args) ->std::future<decltype(f(args...))>
 	{
 		// 把函数f的调用封装为一个函数指针
-		std::function<decltype(f(args...))()> func = std::bind(std::forward<F>(f),std::forward<Args>(args...));
+		std::function<decltype(f(args...))()> func = std::bind(std::forward<F>(f),std::forward<Args>(args)...);
 		// 把封装函数封装为一个任务包
 		// 个人理解任务包是用于记录当前函数调用状态，包含函数指针和执行参数
-		auto task_ptr = std::make_shared<std::packaged_task<decltype(f(args...))>>(func);
+		auto task_ptr = std::make_shared<std::packaged_task<decltype(f(args...))()>>(func);
 		std::function<void()> void_func = [task_ptr]()
 		{
 			(* task_ptr)();

@@ -7,6 +7,11 @@ using namespace std;
 
 int main()
 {
-	cout << "Hello CMake." << endl;
+	ThreadPool pool(4);
+	pool.submit([] {
+		std::cout << "threadpool" << std::endl;
+		});
+	std::this_thread::sleep_for(std::chrono::seconds(1));
+	pool.ShutDown();
 	return 0;
 }
